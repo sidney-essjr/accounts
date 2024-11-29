@@ -11,7 +11,10 @@ import com.bank.accounts.service.IAccountService;
 import com.bank.accounts.web.dto.CustomerDto;
 import com.bank.accounts.web.mapper.AccountMapper;
 import com.bank.accounts.web.mapper.CustomerMapper;
+import com.bank.accounts.web.utils.Utils;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -26,9 +29,12 @@ public class AccountServiceImpl implements IAccountService {
     private final CustomerRepository customerRepository;
 
     /**
-     * @param dto - CustomerDto object
-     * @throws CustomerAlreadyExistsException - if the customer already exists
+     * Creates a new account for the given customer.
+     *
+     * @param dto the CustomerDto object containing customer details
+     * @throws CustomerAlreadyExistsException if a customer with the given mobile number already exists
      */
+    @Transactional
     @Override
     public void createAccount(CustomerDto dto) {
         Customer customer = CustomerMapper.mapToCustomer(dto);
@@ -48,9 +54,13 @@ public class AccountServiceImpl implements IAccountService {
     }
 
     /**
-     * @param mobileNumber - String object
-     * @return the customer details based on the mobile number
+     * Finds the customer details based on the provided mobile number.
+     *
+     * @param mobileNumber the mobile number to search for
+     * @return the CustomerDto containing customer details
+     * @throws ResourceNotFoundException if no customer is found with the given mobile number
      */
+    @Transactional
     @Override
     public CustomerDto findAccountByMobileNumber(String mobileNumber) {
         Customer customer = customerRepository
@@ -69,6 +79,42 @@ public class AccountServiceImpl implements IAccountService {
         customerDto.setAccountDto(AccountMapper.mapToAccountDto(account));
 
         return customerDto;
+    }
+
+    /**
+     * Updates the account details for the given customer.
+     *
+     * @param dto the CustomerDto object containing updated account details
+     * @return true if the account update is successful, false otherwise
+     * @throws ResourceNotFoundException if the account or customer is not found
+     */
+    @Transactional
+    @Override
+    public boolean updateAccount(CustomerDto dto) {
+        boolean isUpdated = false;
+
+        if (dto.getAccountDto() != null) {
+            Account account = accountRepository
+                    .findByAccountNumber(dto.getAccountDto().getAccountNumber())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Account", "accountNumber", dto.getAccountDto().getAccountNumber().toString()
+                            )
+                    );
+
+            BeanUtils
+                    .copyProperties(dto.getAccountDto(), account, Utils.getNullPropertyNames(dto.getAccountDto()));
+
+            accountRepository.save(account);
+
+            Customer customer = customerRepository
+                    .findById(account.getCustomerId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Customer", "customerId", account.getCustomerId().toString()));
+
+            BeanUtils.copyProperties(dto, customer, Utils.getNullPropertyNames(dto));
+            isUpdated = true;
+        }
+        return isUpdated;
     }
 
     /**

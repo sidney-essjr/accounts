@@ -13,4 +13,10 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
      * @return Optional Account
      */
     Optional<Account> findByCustomerId(Long customerId);
+
+    /**
+     * @param accountNumber String represents the accountNumber
+     * @return Optional Account
+     */
+    Optional<Account> findByAccountNumber(Long accountNumber);
 }

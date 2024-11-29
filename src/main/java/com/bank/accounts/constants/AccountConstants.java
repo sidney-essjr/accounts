@@ -13,5 +13,6 @@ public class AccountConstants {
 
     //prevents the creation of instances of this class
     private AccountConstants() {
+        throw new UnsupportedOperationException("Utility class should not be instantiated");
     }
 }

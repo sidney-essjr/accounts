@@ -17,7 +17,7 @@ public class Account extends Auditing {
     @Column(name = "account_id")
     private Long accountId;
 
-    @Column(name = "account_number")
+    @Column(name = "account_number", unique = true)
     private Long accountNumber;
 
     @Column(name = "account_type")
