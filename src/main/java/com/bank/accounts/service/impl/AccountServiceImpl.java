@@ -12,12 +12,10 @@ import com.bank.accounts.web.dto.CustomerDto;
 import com.bank.accounts.web.mapper.AccountMapper;
 import com.bank.accounts.web.mapper.CustomerMapper;
 import com.bank.accounts.web.utils.Utils;
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Random;
 
@@ -34,7 +32,6 @@ public class AccountServiceImpl implements IAccountService {
      * @param dto the CustomerDto object containing customer details
      * @throws CustomerAlreadyExistsException if a customer with the given mobile number already exists
      */
-    @Transactional
     @Override
     public void createAccount(CustomerDto dto) {
         Customer customer = CustomerMapper.mapToCustomer(dto);
@@ -47,8 +44,6 @@ public class AccountServiceImpl implements IAccountService {
                             dto.getMobileNumber()));
         }
 
-        customer.setCreatedAt(LocalDateTime.now());
-        customer.setCreatedBy("Anonymous");
         Customer savedCustomer = customerRepository.save(customer);
         accountRepository.save(createNewAccount(savedCustomer));
     }
@@ -60,7 +55,6 @@ public class AccountServiceImpl implements IAccountService {
      * @return the CustomerDto containing customer details
      * @throws ResourceNotFoundException if no customer is found with the given mobile number
      */
-    @Transactional
     @Override
     public CustomerDto findAccountByMobileNumber(String mobileNumber) {
         Customer customer = customerRepository
@@ -88,7 +82,6 @@ public class AccountServiceImpl implements IAccountService {
      * @return true if the account update is successful, false otherwise
      * @throws ResourceNotFoundException if the account or customer is not found
      */
-    @Transactional
     @Override
     public boolean updateAccount(CustomerDto dto) {
         boolean isUpdated = false;
@@ -101,9 +94,7 @@ public class AccountServiceImpl implements IAccountService {
                             )
                     );
 
-            BeanUtils
-                    .copyProperties(dto.getAccountDto(), account, Utils.getNullPropertyNames(dto.getAccountDto()));
-
+            BeanUtils.copyProperties(dto.getAccountDto(), account, Utils.getNullPropertyNames(dto.getAccountDto()));
             accountRepository.save(account);
 
             Customer customer = customerRepository
@@ -112,14 +103,29 @@ public class AccountServiceImpl implements IAccountService {
                             "Customer", "customerId", account.getCustomerId().toString()));
 
             BeanUtils.copyProperties(dto, customer, Utils.getNullPropertyNames(dto));
+            customerRepository.save(customer);
             isUpdated = true;
         }
         return isUpdated;
     }
 
+    @Override
+    public boolean deleteAccount(String mobileNumber) {
+        Customer customer = customerRepository
+                .findByMobileNumber(mobileNumber)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Customer", "mobileNumber", mobileNumber)
+                );
+        accountRepository.deleteByCustomerId(customer.getCustomerId());
+        customerRepository.deleteById(customer.getCustomerId());
+        return true;
+    }
+
     /**
-     * @param customer - Customer object
-     * @return the new account details
+     * Creates a new account for the given customer.
+     *
+     * @param customer the Customer object containing customer details
+     * @return the newly created Account object
      */
     private Account createNewAccount(Customer customer) {
         Account account = new Account();
@@ -128,8 +134,6 @@ public class AccountServiceImpl implements IAccountService {
         account.setAccountNumber(randomAccNumber);
         account.setAccountType(AccountConstants.SAVINGS);
         account.setBranchAddress(AccountConstants.ADDRESS);
-        account.setCreatedAt(LocalDateTime.now());
-        account.setCreatedBy("Anonymous");
         return account;
     }
 }
