@@ -18,7 +18,7 @@ public class Account extends Auditing {
     private Long accountId;
 
     @Column(name = "account_number")
-    private String accountNumber;
+    private Long accountNumber;
 
     @Column(name = "account_type")
     private String accountType;
@@ -26,8 +26,6 @@ public class Account extends Auditing {
     @Column(name = "branch_address")
     private String branchAddress;
 
-
-    @ManyToOne
-    @JoinColumn(name = "customer_id")
-    private Customer customer;
+    @Column(name = "customer_id")
+    private Long customerId;
 }
